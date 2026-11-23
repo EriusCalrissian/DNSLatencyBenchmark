@@ -1,0 +1,11 @@
+[project]
+name = "dnslatencybenchmark"
+version = "0.1.0"
+description = "DNS resolver latency benchmark for UDP, DoT, DoH, DoQ, and DoH3, measured from your own network."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+dependencies = [
+    "dnspython[doh,doq]>=2.9.2",
+    "httpx2>=2.13",
+]

@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+# Keep requirements.txt in sync with pyproject.toml / uv.lock.
+# Only runs when dependency sources are part of this commit.
+set -eu
+
+if git diff --cached --name-only | grep -Eq '^(pyproject\.toml|uv\.lock)$'; then
+    sh scripts/export-requirements.sh
+    git add requirements.txt
+fi
