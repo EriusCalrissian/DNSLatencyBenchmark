@@ -6,11 +6,9 @@ It works as a plain benchmark. Exporting the fastest servers to AdGuard Home is 
 
 ## Quick start
 
-Python 3.10+, one script, three packages (`dnspython`, `httpx2`, `aioquic`). Prefer [uv](https://docs.astral.sh/uv/):
+Python 3.11+, one script, three packages (`dnspython`, `httpx2`, `aioquic`). With [uv](https://docs.astral.sh/uv/), one command creates the environment, installs the pinned dependencies from `uv.lock`, and runs the script:
 
 ```bash
-uv venv
-uv pip install -r requirements.txt
 uv run python dnslatencybenchmark.py
 ```
 
@@ -22,6 +20,12 @@ Fallback without uv (e.g. system `pip` blocked on Debian):
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 .venv/bin/python dnslatencybenchmark.py
+```
+
+`requirements.txt` is a generated, fully pinned export of `uv.lock` for this fallback. Do not edit it by hand: change `pyproject.toml`, run `uv lock`, then regenerate with `sh scripts/export-requirements.sh`. The pre-commit hook does this automatically when `pyproject.toml` or `uv.lock` is committed. Enable the hook once per clone:
+
+```bash
+git config core.hooksPath .githooks
 ```
 
 ## Why
