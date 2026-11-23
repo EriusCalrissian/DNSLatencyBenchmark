@@ -181,7 +181,7 @@ def prepare_bootstrap(endpoints: list[Endpoint]) -> None:
     if not hosts:
         return
     with ThreadPoolExecutor(max_workers=min(16, len(hosts))) as pool:
-        resolved = dict(zip(hosts, pool.map(resolve_ip, hosts)))
+        resolved = dict(zip(hosts, pool.map(resolve_ip, hosts), strict=True))
     for ep in pending:
         ep.ip = resolved[ep.host]
         ep.ip_source = "hostname_resolve" if ep.ip else None
@@ -418,6 +418,19 @@ def aggregate(runs: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return rows
 
 
+# Output uses non-ASCII glyphs (·, →, —, …). Windows consoles default to a
+# legacy code page like cp1252, which raises UnicodeEncodeError on them, so set
+# the console to UTF-8 and emit UTF-8. No-op elsewhere (already UTF-8).
+if sys.platform == "win32":
+    import ctypes
+
+    ctypes.windll.kernel32.SetConsoleOutputCP(65001)  # UTF-8 code page
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):  # not a reconfigurable text stream
+        pass
+
 COLOR = sys.stdout.isatty() and "NO_COLOR" not in os.environ
 if COLOR and sys.platform == "win32":
     os.system("")  # enables ANSI escape processing in the Windows console
@@ -604,8 +617,11 @@ def show_results(args: argparse.Namespace, latest: list[dict[str, Any]] | None =
     rows = filter_rows(aggregate(runs), args)
     samples = sum(r["ok"] for r in rows)
     print_table(f"All {len(runs)} stored run(s) · {runs_span(runs)} · {samples} samples", rows, args.top)
-    print_table("Best per protocol", best_by(rows, "proto"))
-    print_table("Best per provider (fastest encrypted, plus UDP if faster)", best_per_provider(rows))
+    # "Best" summaries are recommendations, so skip endpoints with no successful
+    # sample (median is None); they sort last but must never win their group.
+    ranked = [r for r in rows if r["median_ms"] is not None]
+    print_table("Best per protocol", best_by(ranked, "proto"))
+    print_table("Best per provider (fastest encrypted, plus UDP if faster)", best_per_provider(ranked))
     print(paint(
         f"\nTotals include every run_*.json in {args.results} — move or delete old runs, "
         "or use --results DIR, to start fresh.\n"
